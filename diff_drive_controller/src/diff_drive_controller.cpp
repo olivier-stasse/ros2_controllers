@@ -21,6 +21,9 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <iostream>
+#include <iomanip>
+#include <limits>
 
 #include "diff_drive_controller/diff_drive_controller.hpp"
 #include "lifecycle_msgs/msg/state.hpp"
@@ -206,6 +209,7 @@ controller_interface::return_type DiffDriveController::update()
     odometry_.update(left_position_mean, right_position_mean, current_time);
   }
 
+
   tf2::Quaternion orientation;
   orientation.setRPY(0.0, 0.0, odometry_.getHeading());
 
@@ -235,15 +239,25 @@ controller_interface::return_type DiffDriveController::update()
     realtime_odometry_transform_publisher_->unlockAndPublish();
   }
 
-
+  std::cout << "current_time:"
+            << std::setprecision(std::numeric_limits<long int>::digits10 +1)
+            << current_time.seconds()
+            << " " << current_time.nanoseconds() << " "
+            << rclcpp::Time::max().nanoseconds() << std::endl;
+  std::cout << "previous_update_timestamp_:" << previous_update_timestamp_.seconds()
+            << " " << previous_update_timestamp_.nanoseconds() << std::endl;
   const auto update_dt = current_time - previous_update_timestamp_;
   previous_update_timestamp_ = current_time;
+
+  //  if (update_dt.seconds()<0)
+  //    return controller_interface::return_type::OK;
 
   auto & last_command = previous_commands_.back().twist;
   auto & second_to_last_command = previous_commands_.front().twist;
   limiter_linear_.limit(
     linear_command, last_command.linear.x, second_to_last_command.linear.x,
     update_dt.seconds());
+
   limiter_angular_.limit(
     angular_command, last_command.angular.z, second_to_last_command.angular.z, update_dt.seconds());
 
